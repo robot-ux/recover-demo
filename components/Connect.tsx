@@ -1,25 +1,17 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 import { useCallback, useEffect, useState } from 'react';
-
-declare global {
-  interface Window {
-    BinanceChain: {
-      on: Function;
-      request: Function;
-      switchNetwork: Function;
-    };
-  }
-}
-
-const networkMapping = {
-  'bsc-mainnet': '0x38',
-  'bsc-testnet': '0x61',
-  'bbc-mainnet': 'Binance-Chain-Tigris',
-  'bbc-testnet': 'Binance-Chain-Ganges',
-};
+import { toHex } from 'viem';
 
 export const isWalletInstalled = () => {
   return typeof window !== 'undefined' && !!window.BinanceChain;
 };
+
+export const getAddress = async () => {
+  const addresses = await window.BinanceChain.request({
+    method: 'eth_requestAccounts',
+  });
+  return addresses?.[0];
+}
 
 export default function Connect() {
   if (!isWalletInstalled()) {
@@ -30,12 +22,28 @@ export default function Connect() {
   const [address, setAddress] = useState('');
 
   const handleGetAddress = useCallback(async () => {
-    const addresses = await window.BinanceChain.request({
-      method: 'eth_requestAccounts',
-    });
-    console.log('getAddress: ', addresses);
-    setAddress(addresses?.[0]);
+    const address = await getAddress();
+    console.log('getAddress: ', address);
+    setAddress(address);
   }, []);
+
+  // listen wallet events
+  const listenAccountChange = useCallback(() => {
+    window.BinanceChain.on(
+      'accountsChanged',
+      async (accounts: Array<string>) => {
+        console.log('accountsChanged: ', accounts);
+        handleGetAddress();
+      },
+    );
+  }, [handleGetAddress]);
+  const listenChainChange = useCallback(() => {
+    window.BinanceChain.on('chainChanged', async (chainId: string) => {
+      console.log('chainChanged: ', chainId);
+      setChainId(chainId);
+      handleGetAddress();
+    });
+  }, [handleGetAddress]);
 
   const handleAutoConnect = useCallback(() => {
     window.BinanceChain.on(
@@ -51,42 +59,32 @@ export default function Connect() {
         }
       },
     );
-  }, []);
-
-  // listen wallet events
-  const listenAccountChange = useCallback(() => {
-    window.BinanceChain.on(
-      'accountsChanged',
-      async (accounts: Array<string>) => {
-        console.log('accountsChanged: ', accounts);
-        handleGetAddress();
-      },
-    );
-  }, []);
-  const listenChainChange = useCallback(() => {
-    window.BinanceChain.on('chainChanged', async (chainId: string) => {
-      console.log('chainChanged: ', chainId);
-      setChainId(chainId);
-      handleGetAddress();
-    });
-  }, []);
+  }, [handleGetAddress, listenAccountChange, listenChainChange]);
 
   const handleSwitchToBscMainnet = useCallback(() => {
     window?.BinanceChain.switchNetwork('bsc-mainnet');
-  }, [chainId]);
+    // window.BinanceChain.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] });
+  }, []);
   const handleSwitchToBscTestnet = useCallback(() => {
     window?.BinanceChain.switchNetwork('bsc-testnet');
-  }, [chainId]);
+  }, []);
   const handleSwitchToBbcMainnet = useCallback(() => {
     window?.BinanceChain.switchNetwork('bbc-mainnet');
-  }, [chainId]);
+  }, []);
   const handleSwitchToBbcTestnet = useCallback(() => {
     window?.BinanceChain.switchNetwork('bbc-testnet');
-  }, [chainId]);
+  }, []);
+
+  // sign
+  const [bbcSignedMsg, setBbcSignedMsg] = useState('');
+  const handleBbcSign = useCallback(async () => {
+    const signed = await window.BinanceChain.bnbSign(await getAddress(), toHex('hello'));
+    setBbcSignedMsg(signed);
+  }, [])
 
   useEffect(() => {
     handleAutoConnect();
-  }, []);
+  }, [handleAutoConnect]);
 
   return (
     <main>
@@ -94,8 +92,7 @@ export default function Connect() {
       <div>Address: {address}</div>
       <button onClick={handleGetAddress}>Get Address</button>
 
-      <hr />
-      <div>Switch Network</div>
+      <h4>Switch Network</h4>
       <button onClick={handleSwitchToBscMainnet}>
         Switch Network to bsc-mainnet
       </button>
@@ -108,6 +105,10 @@ export default function Connect() {
       <button onClick={handleSwitchToBbcTestnet}>
         Switch Network to bbc-testnet
       </button>
+
+      <h4>Sign</h4>
+      <button onClick={handleBbcSign}>Bbc Sign</button>
+      <div style={{ wordWrap: 'break-word' }}>Bbc sign result: {JSON.stringify(bbcSignedMsg)}</div>
     </main>
   );
 }
