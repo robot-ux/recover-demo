@@ -1,6 +1,5 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import { useCallback, useEffect, useState } from 'react';
-import { toHex } from 'viem';
 
 export const isWalletInstalled = () => {
   return typeof window !== 'undefined' && !!window.BinanceChain;
@@ -11,7 +10,7 @@ export const getAddress = async () => {
     method: 'eth_requestAccounts',
   });
   return addresses?.[0];
-}
+};
 
 export default function Connect() {
   if (!isWalletInstalled()) {
@@ -78,9 +77,12 @@ export default function Connect() {
   // sign
   const [bbcSignedMsg, setBbcSignedMsg] = useState('');
   const handleBbcSign = useCallback(async () => {
-    const signed = await window.BinanceChain.bnbSign(await getAddress(), toHex('hello'));
+    const signed = await window.BinanceChain.bnbSign(
+      await getAddress(),
+      'hello',
+    );
     setBbcSignedMsg(signed);
-  }, [])
+  }, []);
 
   useEffect(() => {
     handleAutoConnect();
@@ -108,7 +110,9 @@ export default function Connect() {
 
       <h4>Sign</h4>
       <button onClick={handleBbcSign}>Bbc Sign</button>
-      <div style={{ wordWrap: 'break-word' }}>Bbc sign result: {JSON.stringify(bbcSignedMsg)}</div>
+      <div style={{ wordWrap: 'break-word' }}>
+        Bbc sign result: {JSON.stringify(bbcSignedMsg)}
+      </div>
     </main>
   );
 }

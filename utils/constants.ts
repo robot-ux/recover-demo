@@ -1,6 +1,6 @@
 
 export const DEFAULT_PROJECT_ID = '44943520ff05e5b6e394f06c7c653195';
-export const DEFAULT_LOGGER = 'debug';
+export const DEFAULT_LOGGER = 'info';
 export const DEFAULT_RELAY_URL = 'wss://relay.walletconnect.com';
 export const DEFAULT_METADATA = {
     name: 'WalletConnectDemo',
